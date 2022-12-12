@@ -1,6 +1,7 @@
 const urlModel = require('../models/urlModel');
 const isUrlValid = require("url-validation");
 const{isValidRequestBody,isValid}=require('../validations/validation')
+const axios = require('axios')
 const shortid = require("shortid");
 const baseUrl = 'http://localhost:3000'
 
@@ -12,6 +13,7 @@ const generateUrl = async function (req, res) {
   
     //destructuring
     const { longUrl } = req.body
+
     if (!isValidRequestBody(req.body)) {
         return res.status(400).send({ status: false, message: 'Invalid request parameters. Please provide long url' })
     }
@@ -27,8 +29,21 @@ const generateUrl = async function (req, res) {
         return res.status(400).send({ status: false, message: "longUrl is not valid, Please provide valid url" })
 
     }
-   
 
+    let option = {
+        method: 'get',
+        url: longUrl
+    }
+    let urlValidate = await axios(option)
+        .then(() => longUrl)   
+        .catch(() => null)    
+
+    if (!urlValidate) { 
+        return res.status(400).send({ status: false, message: `This Link: ${longUrl} is not Valid URL.` }) 
+    }
+
+    console.log(urlValidate)
+   
         let myUrl = longUrl.trim().split(' ').join('')
         let url = await urlModel.findOne({ longUrl: myUrl }).select({ longUrl: 1, shortUrl: 1, urlCode: 1, _id: 0 })
         if (url) {
@@ -39,7 +54,7 @@ const generateUrl = async function (req, res) {
             const shortUrl = baseUrl + '/' + urlCode
             let shortUrlInLowerCase = shortUrl.toLowerCase()
 
-
+            
 
             url = {
                 longUrl: longUrl.trim().split(' ').join(''),
