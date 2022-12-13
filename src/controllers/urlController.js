@@ -3,7 +3,7 @@ const isUrlValid = require("url-validation");
 const{isValidRequestBody,isValid}=require('../validations/validation')
 const axios = require('axios')
 const shortid = require("shortid");
-const baseUrl = 'http://localhost:3000'
+// const baseUrl = 'http://localhost:3000'
 
 
 
@@ -25,12 +25,10 @@ const generateUrl = async function (req, res) {
 
 
     //check long url is valid or not-http is present or not
-    if (!isUrlValid(longUrl.trim().split(' ').join(''))) {
-        return res.status(400).send({ status: false, message: "longUrl is not valid, Please provide valid url" })
+    // if (!isUrlValid(longUrl.trim().split(' ').join(''))) {
+    //     return res.status(400).send({ status: false, message: "longUrl is not valid, Please provide valid url" })
 
-    }
-
-    
+    // }
 
     let option = {
         method: 'get',
@@ -41,10 +39,10 @@ const generateUrl = async function (req, res) {
         .catch(() => null)    
 
     if (!urlValidate) { 
-        return res.status(400).send({ status: false, message: `This Link: ${longUrl} is not Valid URL.` }) 
+        return res.status(400).send({ status: false, message: `This Link ${longUrl} is not Valid URL.` }) 
     }
 
-    console.log(urlValidate)
+    // console.log(urlValidate)
    
         let myUrl = longUrl.trim().split(' ').join('')
         let url = await urlModel.findOne({ longUrl: myUrl }).select({ longUrl: 1, shortUrl: 1, urlCode: 1, _id: 0 })
@@ -53,9 +51,9 @@ const generateUrl = async function (req, res) {
         }
         else {
             const urlCode = shortid.generate()
-            const shortUrl = baseUrl + '/' + urlCode
+            // const shortUrl = baseUrl + '/' + urlCode
+            let shortUrl = `${req.protocol}://${req.headers.host}/` + urlCode
             let shortUrlInLowerCase = shortUrl.toLowerCase()
-
             
 
             url = {
@@ -82,10 +80,9 @@ const redirectToLongUrl = async function (req, res) {
       
             const findUrl = await urlModel.findOne({ urlCode: urlCode })
             if (!findUrl) {
-                
-                return res.status(302).send({ status: false, msg: "No URL Found" })         
+                return res.status(404).send({ status: false, msg: "No URL Found" })         
         }else{
-            return res.status(200).send({status:true,message:"succesfully fetch Url",data:findUrl})
+            return res.status(302).redirect(findUrl.longUrl)
         }
     }
     catch (err) {
