@@ -50,29 +50,22 @@ const generateUrl = async function (req, res) {
 
 
     //check long url is valid or not-http is present or not
-    // if (!isUrlValid(longUrl.trim().split(' ').join(''))) {
-    //     return res.status(400).send({ status: false, message: "longUrl is not valid, Please provide valid url" })
+    if (!isUrlValid(longUrl)) {
+        return res.status(400).send({ status: false, message: "longUrl is not valid, Please provide valid url" })
 
-    // }
-
-    let option = {
-        method: 'get',
-        url: longUrl
     }
-    let urlValidate = await axios(option)
-        .then(() => longUrl)   
-        .catch(() => null)    
-
-    if (!urlValidate) { 
-        return res.status(400).send({ status: false, message: `This Link ${longUrl} is not Valid URL.` }) 
-    }
-
-    // console.log(urlValidate)
    
         let myUrl = longUrl.trim().split(' ').join('')
+        let cahcedUrlData = await GET_ASYNC(`${myUrl}`)
+        if (cahcedUrlData) {
+        const urlDetails = JSON.parse(cahcedUrlData)
+            return res.status(200).send({ satus: true, data: urlDetails })
+        }
         let url = await urlModel.findOne({ longUrl: myUrl }).select({ longUrl: 1, shortUrl: 1, urlCode: 1, _id: 0 })
         if (url) {
-            res.status(200).send({ status: true, data: url })
+            await SET_ASYNC(`${longUrl}`, JSON.stringify(url))
+            return res.status(200).send({ satus: true, data: url })
+           // res.status(200).send({ status: true, data: url })
         }
         else {
             const urlCode = shortid.generate()
@@ -107,8 +100,7 @@ const redirectToLongUrl = async function (req, res) {
 
         if (cachedUrlData) {
             const parseLongUrl = JSON.parse(cachedUrlData)
-
-            res.status(302).redirect(parseLongUrl.longUrl)
+           res.status(302).redirect(parseLongUrl.longUrl)
         }
         else {
             const findUrl = await urlModel.findOne({ urlCode: urlCode })
@@ -118,9 +110,10 @@ const redirectToLongUrl = async function (req, res) {
             }
             else {
                 // when valid we perform a redirect
-                res.status(302).redirect(findUrl.longUrl)
+           
                 //setting or storing data  in cache
-                await SET_ASYNC(`${urlCode}`, JSON.stringify(findUrl)).select({ _id: 0 })
+                await SET_ASYNC(`${urlCode}`, JSON.stringify(findUrl))
+                res.status(302).redirect(findUrl.longUrl)
             }
         }
     }
