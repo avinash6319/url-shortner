@@ -59,12 +59,12 @@ const generateUrl = async function (req, res) {
         let cahcedUrlData = await GET_ASYNC(`${myUrl}`)
         if (cahcedUrlData) {
         const urlDetails = JSON.parse(cahcedUrlData)
-            return res.status(200).send({ satus: true, data: urlDetails })
+            return res.status(200).send({ satus: true, data: urlDetails,msg:"Url is coming from cache" })
         }
         let url = await urlModel.findOne({ longUrl: myUrl }).select({ longUrl: 1, shortUrl: 1, urlCode: 1, _id: 0 })
         if (url) {
-            await SET_ASYNC(`${longUrl}`, JSON.stringify(url))
-            return res.status(200).send({ satus: true, data: url })
+            await SET_ASYNC(`${longUrl}`, JSON.stringify(url),"EX",10)
+            return res.status(200).send({ satus: true, data: url, msg:"Url is coming from DB" })
            // res.status(200).send({ status: true, data: url })
         }
         else {
@@ -112,7 +112,7 @@ const redirectToLongUrl = async function (req, res) {
                 // when valid we perform a redirect
            
                 //setting or storing data  in cache
-                await SET_ASYNC(`${urlCode}`, JSON.stringify(findUrl))
+                await SET_ASYNC(`${urlCode}`, JSON.stringify(findUrl),"EX",10)
                 res.status(302).redirect(findUrl.longUrl)
             }
         }
