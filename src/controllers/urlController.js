@@ -3,7 +3,32 @@ const isUrlValid = require("url-validation");
 const{isValidRequestBody,isValid}=require('../validations/validation')
 const axios = require('axios')
 const shortid = require("shortid");
+const redis = require("redis")
+const{ promisify }=require("util")
+
 // const baseUrl = 'http://localhost:3000'
+
+
+//1. Connect to the redis server
+const redisClient = redis.createClient(
+    19651,
+    "redis-19651.c212.ap-south-1-1.ec2.cloud.redislabs.com",
+    { no_ready_check: true }
+  );
+  redisClient.auth("KxNteVr0C2qGoJ5MMqbtZuDlNeeXI9OR", function (err) {
+    if (err) throw err;
+  });
+  
+  redisClient.on("connect", async function () {
+    console.log("Connected to Redis..");
+  });
+  
+  
+  
+  //2. Prepare the functions for each command
+  
+  const SET_ASYNC = promisify(redisClient.SET).bind(redisClient);
+  const GET_ASYNC = promisify(redisClient.GET).bind(redisClient);
 
 
 
@@ -77,12 +102,26 @@ const generateUrl = async function (req, res) {
 const redirectToLongUrl = async function (req, res) {
     try {
         const urlCode = req.params.urlCode
-      
+      //finding longUrl in cache through urlCode
+        let cachedUrlData = await GET_ASYNC(`${urlCode}`)
+
+        if (cachedUrlData) {
+            const parseLongUrl = JSON.parse(cachedUrlData)
+
+            res.status(302).redirect(parseLongUrl.longUrl)
+        }
+        else {
             const findUrl = await urlModel.findOne({ urlCode: urlCode })
             if (!findUrl) {
-                return res.status(404).send({ status: false, msg: "No URL Found" })         
-        }else{
-            return res.status(302).redirect(findUrl.longUrl)
+                // return a not found 404 status
+                return res.status(404).send({ status: false, msg: "No URL Found" })
+            }
+            else {
+                // when valid we perform a redirect
+                res.status(302).redirect(findUrl.longUrl)
+                //setting or storing data  in cache
+                await SET_ASYNC(`${urlCode}`, JSON.stringify(findUrl)).select({ _id: 0 })
+            }
         }
     }
     catch (err) {
