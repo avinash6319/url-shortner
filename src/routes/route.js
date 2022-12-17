@@ -6,7 +6,7 @@ const urlController = require('../controllers/urlController');
 
 router.post('/url/shorten',urlController.generateUrl);
 
-router.get('/:urlCode',urlController.redirectToLongUrl)
+//router.get('/:urlCode',urlController.redirectToLongUrl)
 
 router.all('/*', (req, res) => {
     return res.status(400).send({ status: false, message: "Please provide correct path!" })
